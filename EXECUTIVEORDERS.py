@@ -160,8 +160,8 @@ def main():
         print("[ok] Sin novedades.")
         return
 
-    # Procesar en orden cronológico (del más nuevo al más viejo)
-    for it in new_items:
+    # Procesar en orden cronológico (del viejo al más nuevo)
+    for it in reversed(new_items):
         msg = format_alert(it)
         notify(msg)
         time.sleep(1)  # pequeña pausa por si hay varios
