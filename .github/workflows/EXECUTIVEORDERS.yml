@@ -2,7 +2,7 @@ name: EO Watcher
 
 on:
   schedule:
-    - cron: "0 */6 * * *"   # cada 6 horas
+    - cron: "0 */1 * * *"   # cada 1 hora
   workflow_dispatch: {}      # para correrlo manualmente si quieres
 
 jobs:
