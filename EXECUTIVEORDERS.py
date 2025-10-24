@@ -29,8 +29,8 @@ from typing import List, Dict, Optional
 import requests
 from bs4 import BeautifulSoup
 
-WHITEHOUSE_EO_URL = "https://www.whitehouse.gov/briefing-room/presidential-actions/executive-orders/"
-FEDREG_API_URL = "https://www.federalregister.gov/api/v1/documents.json"
+WHITEHOUSE_EO_URL = "https://www.whitehouse.gov/presidential-actions/executive-orders/"
+
 
 SESSION = requests.Session()
 SESSION.headers.update({
