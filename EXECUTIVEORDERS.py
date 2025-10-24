@@ -140,10 +140,14 @@ def main():
     state = load_state(state_path)
     last_seen_url = state.get("last_seen_url", "")
 
-    items = fetch_whitehouse_list(max_items=max_items)
+    items = fetch_whitehouse_list(max_items=max_items).rstrip("/")
     if not items:
         print("[info] No se encontraron items en la lista (DOM pudo cambiar).")
         return
+    
+    # Normalizar URLs (sin barra final ni parámetros)
+    for it in items:
+        it["url"] = it["url"].split("?")[0].rstrip("/")
 
     # Detectar nuevos (del primero hacia atrás hasta llegar al último visto)
     new_items: List[Dict] = []
@@ -156,8 +160,8 @@ def main():
         print("[ok] Sin novedades.")
         return
 
-    # Procesar en orden cronológico (del más viejo al más nuevo)
-    for it in reversed(new_items):
+    # Procesar en orden cronológico (del más nuevo al más viejo)
+    for it in new_items:
         msg = format_alert(it)
         notify(msg)
         time.sleep(1)  # pequeña pausa por si hay varios
