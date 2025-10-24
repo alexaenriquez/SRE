@@ -133,7 +133,7 @@ def format_alert(item: Dict) -> str:
     return "\n".join(parts)
 
 def main():
-    state_path = os.getenv("STATE_PATH", ".eo_state.json")
+    state_path = os.getenv("STATE_PATH", os.path.expanduser("~/eo_state.json"))
     max_items = int(os.getenv("MAX_ITEMS", "20"))
     fr_check = os.getenv("FR_CHECK", "1") == "1"
 
