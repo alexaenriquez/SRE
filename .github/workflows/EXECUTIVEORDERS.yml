@@ -27,4 +27,4 @@ jobs:
           STATE_PATH: ".eo_state.json"
           FR_CHECK: "1"
           MAX_ITEMS: "20"
-        run: python watch_eo.py
+        run: python EXECUTIVEORDERS.py
