@@ -117,7 +117,7 @@ def notify(msg: str):
         except Exception as e:
             print(f"[warn] Webhook error: {e}", file=sys.stderr)
 
-def format_alert(item: Dict, fr: Optional[Dict]) -> str:
+def format_alert(item: Dict) -> str:
     parts = []
     parts.append("🚨 *Nueva Executive Order detectada*")
     title = html.escape(item.get("title", ""))
