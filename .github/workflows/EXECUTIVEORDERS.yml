@@ -1,0 +1,30 @@
+name: EO Watcher
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"   # cada 6 horas
+  workflow_dispatch: {}      # para correrlo manualmente si quieres
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run EO watcher
+        env:
+          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}  # opcional, para notificaciones
+          STATE_PATH: ".eo_state.json"
+          FR_CHECK: "1"
+          MAX_ITEMS: "20"
+        run: python watch_eo.py

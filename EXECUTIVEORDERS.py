@@ -113,7 +113,7 @@ def notify(msg: str):
     hook = os.getenv("WEBHOOK_URL", "").strip()
     if hook:
         try:
-            SESSION.post(hook, json={"text": msg}, timeout=20)
+            SESSION.post(hook, json={"content": msg}, timeout=20)
         except Exception as e:
             print(f"[warn] Webhook error: {e}", file=sys.stderr)
 
