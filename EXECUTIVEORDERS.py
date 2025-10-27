@@ -30,7 +30,7 @@ import requests
 from bs4 import BeautifulSoup
 
 WHITEHOUSE_EO_URL = "https://www.whitehouse.gov/presidential-actions/executive-orders/"
-
+WHITEHOUSE_PR_URL = "https://www.whitehouse.gov/presidential-actions/proclamations/"
 
 SESSION = requests.Session()
 SESSION.headers.update({
@@ -52,13 +52,13 @@ def save_state(path: str, data: Dict):
         json.dump(data, f, ensure_ascii=False, indent=2)
     os.replace(tmp, path)
 
-def fetch_whitehouse_list(max_items: int = 20) -> List[Dict]:
+def fetch_whitehouse_list(URL, max_items: int = 20) -> List[Dict]:
     """
     Devuelve una lista de EO con: { 'title', 'date', 'url', 'eo_number' }
     Nota: el DOM puede cambiar; se usan selectores relativamente robustos.
     """
     out = []
-    url = WHITEHOUSE_EO_URL
+    url = URL
     r = SESSION.get(url, timeout=30)
     r.raise_for_status()
     soup = BeautifulSoup(r.text, "html.parser")
@@ -92,7 +92,7 @@ def fetch_whitehouse_list(max_items: int = 20) -> List[Dict]:
             continue
 
         # Intento de extraer “EO xxxx” del título
-        m = re.search(r"\b(?:Executive Order\s*No\.?|EO)\s*([0-9\-]+)\b", title, flags=re.IGNORECASE)
+        m = re.search(r"\b(?:Executive Order\s*No\.?|EO|Proclamation\s*No\.?)\s*([0-9\-]+)\b", title, flags=re.IGNORECASE)
         eo_number = m.group(1) if m else None
 
         out.append({
@@ -119,7 +119,7 @@ def notify(msg: str):
 
 def format_alert(item: Dict) -> str:
     parts = []
-    parts.append("🚨 *Nueva Executive Order detectada*")
+    parts.append("🚨 *Nueva acción presidencial detectada*")
     title = html.escape(item.get("title", ""))
     date = item.get("date", "")
     url = item.get("url", "")
@@ -140,7 +140,9 @@ def main():
     state = load_state(state_path)
     last_seen_url = state.get("last_seen_url", "")
 
-    items = fetch_whitehouse_list(max_items=max_items)
+    items = fetch_whitehouse_list(URL=WHITEHOUSE_EO_URL, max_items=max_items)
+    items += fetch_whitehouse_list(URL=WHITEHOUSE_PR_URL, max_items=max_items)
+
     if not items:
         print("[info] No se encontraron items en la lista (DOM pudo cambiar).")
         return
