@@ -80,13 +80,6 @@ def fetch_whitehouse_list(URL, max_items: int = 20) -> List[Dict]:
                 date = t.get("datetime") or t.get_text(strip=True)
 
         tipo = "Proclamation" if "proclamation" in URL else "Executive Order"
-
-        if not title or not href:
-            continue
-
-        # 🔍 Detectar si es Executive Order o Proclamation
-        if not re.search(r"\b(Executive Order|Proclamation)\b", title, flags=re.IGNORECASE):
-            continue  # Ignorar otros tipos (como memoranda, fact sheets, etc.)
         
         m = re.search(r"\b(?:Executive Order\s*No\.?|EO|Proclamation(?:\s*No\.?)?)\s*([0-9\-]+)\b",
                       title, flags=re.IGNORECASE)
@@ -137,7 +130,6 @@ def main():
     fr_check = os.getenv("FR_CHECK", "1") == "1"
 
     state = load_state(state_path)
-    last_seen_url = state.get("last_seen_url", "")
 
     items = fetch_whitehouse_list(URL=WHITEHOUSE_EO_URL, max_items=max_items)
     items += fetch_whitehouse_list(URL=WHITEHOUSE_PR_URL, max_items=max_items)
@@ -145,13 +137,18 @@ def main():
     if not items:
         print("[info] No se encontraron items en la lista (DOM pudo cambiar).")
         return
-
-    # Detectar nuevos (del primero hacia atrás hasta llegar al último visto)
+    
+    # Filtrar nuevos por tipo y mantener orden
     new_items: List[Dict] = []
-    for it in items:
-        if it["url"] == last_seen_url:
-            break
-        new_items.append(it)
+    for tipo_key in ["Executive Order", "Proclamation"]:
+        last_seen = state.get(tipo_key, "")
+        tipo_items = [it for it in items if it["tipo"] == tipo_key]
+        
+        for it in tipo_items:
+            if it["url"] == last_seen:
+                break  # Detener solo para este tipo
+            new_items.append(it)
+
 
     if not new_items:
         print("[ok] Sin novedades.")
@@ -163,8 +160,13 @@ def main():
         notify(msg)
         time.sleep(1)  # pequeña pausa por si hay varios
 
-    # Actualizar estado al más reciente de la lista
-    state["last_seen_url"] = items[0]["url"]
+    # Guardar último visto por tipo
+    for tipo_key in ["Executive Order", "Proclamation"]:
+        tipo_new_items = [it for it in new_items if it["tipo"] == tipo_key]
+        if tipo_new_items:
+            state[tipo_key] = tipo_new_items[-1]["url"]  # el más reciente de este tipo
+
+
     save_state(state_path, state)
     print("[done] Estado actualizado.")
 
