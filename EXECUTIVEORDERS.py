@@ -58,49 +58,41 @@ def fetch_whitehouse_list(URL, max_items: int = 20) -> List[Dict]:
     Nota: el DOM puede cambiar; se usan selectores relativamente robustos.
     """
     out = []
-    url = URL
-    r = SESSION.get(url, timeout=30)
+    r = SESSION.get(URL, timeout=30)
     r.raise_for_status()
     soup = BeautifulSoup(r.text, "html.parser")
 
-    # Cada EO suele aparecer como tarjetas/artículos en la lista
-    cards = soup.select("article, .card, .post") or soup.select(".view-content .views-row")
+    cards = soup.select("article a[href]")
     if not cards:
-        # fallback más amplio
-        cards = soup.find_all(["article", "div"], recursive=True)
+        cards = soup.find_all("a", href=True)
 
-    for c in cards:
-        # Título + enlace
-        a = c.find("a", href=True)
-        title = (a.get_text(strip=True) if a else "").strip()
-        href = (a["href"] if a else "").strip()
-        if href and href.startswith("/"):
+    for a in cards:
+        title = a.get_text(strip=True)
+        href = a["href"]
+        if href.startswith("/"):
             href = "https://www.whitehouse.gov" + href
 
-        # Fecha (suele estar en <time> o en un span con clase de fecha)
+        parent = a.find_parent("article")
         date = ""
-        t = c.find("time")
-        if t and (t.get("datetime") or t.get_text(strip=True)):
-            date = t.get("datetime") or t.get_text(strip=True)
-        else:
-            # intentar con clases comunes
-            date_el = c.select_one(".posted-on, .meta, .date, .entry__meta")
-            if date_el:
-                date = date_el.get_text(" ", strip=True)
+        if parent:
+            t = parent.find("time")
+            if t:
+                date = t.get("datetime") or t.get_text(strip=True)
 
-        if not title or not href:
-            continue
+        tipo = "Proclamation" if "proclamation" in URL else "Executive Order"
 
-        # Intento de extraer “EO xxxx” del título
-        m = re.search(r"\b(?:Executive Order\s*No\.?|EO|Proclamation\s*No\.?)\s*([0-9\-]+)\b", title, flags=re.IGNORECASE)
+        m = re.search(r"\b(?:Executive Order\s*No\.?|EO|Proclamation(?:\s*No\.?)?)\s*([0-9\-]+)\b",
+                      title, flags=re.IGNORECASE)
         eo_number = m.group(1) if m else None
 
         out.append({
             "title": title,
             "date": date,
             "url": href,
-            "eo_number": eo_number
+            "eo_number": eo_number,
+            "tipo": tipo
         })
+
         if len(out) >= max_items:
             break
 
@@ -119,17 +111,17 @@ def notify(msg: str):
 
 def format_alert(item: Dict) -> str:
     parts = []
-    parts.append("🚨 *Nueva acción presidencial detectada*")
+    tipo = item.get("tipo", "Acción presidencial")
+    parts.append(f"🚨 Nueva {tipo} detectada")
     title = html.escape(item.get("title", ""))
     date = item.get("date", "")
     url = item.get("url", "")
     eo = item.get("eo_number") or "s/n"
 
-    parts.append(f"• **Título:** {title}")
-    parts.append(f"• **Fecha (WH):** {date}")
-    parts.append(f"• **EO #:** {eo}")
-    parts.append(f"• **Enlace (WH):** {url}")
-
+    parts.append(f"• *Título:* {title}")
+    parts.append(f"• *Fecha (WH):* {date}")
+    parts.append(f"• *Número:* {eo}")
+    parts.append(f"• *Enlace:* {url}")
     return "\n".join(parts)
 
 def main():
