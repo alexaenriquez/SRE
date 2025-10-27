@@ -62,28 +62,30 @@ def fetch_whitehouse_list(URL, max_items: int = 20) -> List[Dict]:
     r.raise_for_status()
     soup = BeautifulSoup(r.text, "html.parser")
 
-    cards = soup.select("article a[href]")
-    if not cards:
-        cards = soup.find_all("a", href=True)
-
-    for a in cards:
+    # Buscar artículos principales
+    articles = soup.select("article")
+    for art in articles:
+        a = art.find("a", href=True)
+        if not a:
+            continue
         title = a.get_text(strip=True)
         href = a["href"]
         if href.startswith("/"):
             href = "https://www.whitehouse.gov" + href
 
-        parent = a.find_parent("article")
-        date = ""
-        if parent:
-            t = parent.find("time")
-            if t:
-                date = t.get("datetime") or t.get_text(strip=True)
+        # Extraer fecha si existe
+        t = art.find("time")
+        date = t.get("datetime") if t else ""
 
+        # Determinar tipo según URL
         tipo = "Proclamation" if "proclamation" in URL else "Executive Order"
-        
+
+        # Solo incluir si el título contiene EO o Proclamation
         m = re.search(r"\b(?:Executive Order\s*No\.?|EO|Proclamation(?:\s*No\.?)?)\s*([0-9\-]+)\b",
                       title, flags=re.IGNORECASE)
         eo_number = m.group(1) if m else None
+        if eo_number is None:
+            continue  # saltar enlaces que no sean EO/Proclamation
 
         out.append({
             "title": title,
@@ -97,7 +99,6 @@ def fetch_whitehouse_list(URL, max_items: int = 20) -> List[Dict]:
             break
 
     return out
-
 
 def notify(msg: str):
     print(msg)
