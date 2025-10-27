@@ -54,35 +54,41 @@ def save_state(path: str, data: Dict):
 
 def fetch_whitehouse_list(URL, max_items: int = 20) -> List[Dict]:
     """
-    Devuelve una lista de EO con: { 'title', 'date', 'url', 'eo_number' }
-    Nota: el DOM puede cambiar; se usan selectores relativamente robustos.
+    Devuelve una lista de EO o Proclamations con:
+    { 'title', 'date', 'url', 'eo_number', 'tipo' }
+    Adaptado al nuevo DOM de la Casa Blanca.
     """
     out = []
     r = SESSION.get(URL, timeout=30)
     r.raise_for_status()
     soup = BeautifulSoup(r.text, "html.parser")
 
-    # Buscar artículos principales
-    articles = soup.select("article")
-    for art in articles:
-        a = art.find("a", href=True)
+    # Seleccionar cada publicación
+    posts = soup.select("div.wp-block-whitehouse-post-template__content")
+    
+    for post in posts:
+        a = post.select_one(".wp-block-post-title a[href]")
         if not a:
             continue
+
         title = a.get_text(strip=True)
         href = a["href"]
         if href.startswith("/"):
             href = "https://www.whitehouse.gov" + href
 
         # Extraer fecha si existe
-        t = art.find("time")
+        t = post.select_one("time")
         date = t.get("datetime") if t else ""
 
         # Determinar tipo según URL
         tipo = "Proclamation" if "proclamation" in URL else "Executive Order"
 
         # Solo incluir si el título contiene EO o Proclamation
-        m = re.search(r"\b(?:Executive Order\s*No\.?|EO|Proclamation(?:\s*No\.?)?)\s*([0-9\-]+)\b",
-                      title, flags=re.IGNORECASE)
+        m = re.search(
+            r"\b(?:Executive Order\s*No\.?|EO|Proclamation(?:\s*No\.?)?)\s*([0-9\-]+)\b",
+            title,
+            flags=re.IGNORECASE
+        )
         eo_number = m.group(1) if m else None
         if eo_number is None:
             continue  # saltar enlaces que no sean EO/Proclamation
