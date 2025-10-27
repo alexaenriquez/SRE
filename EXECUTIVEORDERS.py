@@ -54,9 +54,9 @@ def save_state(path: str, data: Dict):
 
 def fetch_whitehouse_list(URL, max_items: int = 20) -> List[Dict]:
     """
-    Devuelve una lista de EO o Proclamations con:
+    Devuelve una lista de Executive Orders o Proclamations con:
     { 'title', 'date', 'url', 'eo_number', 'tipo' }
-    Adaptado al nuevo DOM de la Casa Blanca.
+    Basado en las categorías actuales del sitio de la Casa Blanca.
     """
     out = []
     r = SESSION.get(URL, timeout=30)
@@ -65,33 +65,42 @@ def fetch_whitehouse_list(URL, max_items: int = 20) -> List[Dict]:
 
     # Seleccionar cada publicación
     posts = soup.select("div.wp-block-whitehouse-post-template__content")
-    
+
     for post in posts:
+        # Título y enlace principal
         a = post.select_one(".wp-block-post-title a[href]")
         if not a:
             continue
-
         title = a.get_text(strip=True)
         href = a["href"]
         if href.startswith("/"):
             href = "https://www.whitehouse.gov" + href
 
-        # Extraer fecha si existe
+        # Fecha si existe
         t = post.select_one("time")
         date = t.get("datetime") if t else ""
 
-        # Determinar tipo según URL
-        tipo = "Proclamation" if "proclamation" in URL else "Executive Order"
+        # Determinar tipo según la categoría
+        tipo = None
+        cat_links = post.select("div.taxonomy-category a")
+        for cl in cat_links:
+            txt = cl.get_text(strip=True).lower()
+            if "executive orders" in txt:
+                tipo = "Executive Order"
+                break
+            elif "proclamations" in txt:
+                tipo = "Proclamation"
+                break
+        if tipo is None:
+            continue  # no es EO ni Proclamation
 
-        # Solo incluir si el título contiene EO o Proclamation
+        # Intentar extraer número de EO/Proclamation del título (opcional)
         m = re.search(
             r"\b(?:Executive Order\s*No\.?|EO|Proclamation(?:\s*No\.?)?)\s*([0-9\-]+)\b",
             title,
             flags=re.IGNORECASE
         )
         eo_number = m.group(1) if m else None
-        if eo_number is None:
-            continue  # saltar enlaces que no sean EO/Proclamation
 
         out.append({
             "title": title,
