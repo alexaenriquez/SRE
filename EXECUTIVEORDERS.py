@@ -81,6 +81,13 @@ def fetch_whitehouse_list(URL, max_items: int = 20) -> List[Dict]:
 
         tipo = "Proclamation" if "proclamation" in URL else "Executive Order"
 
+        if not title or not href:
+            continue
+
+        # 🔍 Detectar si es Executive Order o Proclamation
+        if not re.search(r"\b(Executive Order|Proclamation)\b", title, flags=re.IGNORECASE):
+            continue  # Ignorar otros tipos (como memoranda, fact sheets, etc.)
+        
         m = re.search(r"\b(?:Executive Order\s*No\.?|EO|Proclamation(?:\s*No\.?)?)\s*([0-9\-]+)\b",
                       title, flags=re.IGNORECASE)
         eo_number = m.group(1) if m else None
